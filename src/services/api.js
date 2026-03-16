@@ -35,9 +35,15 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
+    const url = error.config?.url || '';
+    const esLogin =
+      url.includes('/auth/cobrador/login') ||
+      url.includes('/auth/cobrador/login-cedula');
+
     if (error.response) {
       console.error('❌ Error respuesta:', error.response.status, error.response.data);
-      if (error.response.status === 401) {
+
+      if (error.response.status === 401 && !esLogin) {
         localStorage.removeItem('cobrador_token');
         localStorage.removeItem('cobrador_user');
         window.location.href = '/';
@@ -47,20 +53,21 @@ api.interceptors.response.use(
     } else {
       console.error('❌ Error:', error.message);
     }
+
     return Promise.reject(error);
   }
 );
 
 // ============ SERVICIOS DE AUTENTICACIÓN ============
 export const authAPI = {
-  login: (usuario, password) => 
-    api.post('/auth/cobrador/login', { email: usuario, password }),
-  
-  loginWithCedula: (cedula, password) => 
-    api.post('/auth/cobrador/login-cedula', { cedula, password }),
-  
+  login: (usuario, password) =>
+    api.post('/auth/cobrador/login', { email: usuario.trim(), password: password.trim() }),
+
+  loginWithCedula: (cedula, password) =>
+    api.post('/auth/cobrador/login-cedula', { cedula: cedula.trim(), password: password.trim() }),
+
   logout: () => api.post('/auth/logout'),
-  
+
   verifyToken: () => api.get('/auth/verify')
 };
 
@@ -97,10 +104,7 @@ export const prestamosAPI = {
 
 // ============ SERVICIOS PARA PAGOS ============
 export const pagosAPI = {
-  // ✅ CORREGIDO: El ID va en el body, no en la URL
   registrar: (data) => api.post('/cobrador/pagos', data),
-  
-  // ✅ Estos sí llevan ID en la URL (son GET)
   getByPrestamo: (prestamoId) => api.get(`/cobrador/prestamos/${prestamoId}/pagos`),
   getAll: (params) => api.get('/cobrador/pagos', { params }),
   getDelDia: () => api.get('/cobrador/pagos/hoy'),
