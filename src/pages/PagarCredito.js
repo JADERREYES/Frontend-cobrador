@@ -37,35 +37,57 @@ export default function PagarCredito() {
   const [success, setSuccess] = useState('');
 
   const load = async () => {
-    const [pRes, pgRes] = await Promise.all([
-      prestamosAPI.getAll(),
-      pagosAPI.getByPrestamo(prestamoId)
-    ]);
-    const p = pRes.data.find(x => x._id === prestamoId);
-    setPrestamo(p);
-    setPagos(pgRes.data);
+    try {
+      // Obtener préstamos y filtrar por ID
+      const [pRes, pgRes] = await Promise.all([
+        prestamosAPI.getAll(),
+        pagosAPI.getByPrestamo(prestamoId)
+      ]);
+      const p = Array.isArray(pRes.data) 
+        ? pRes.data.find(x => x._id === prestamoId)
+        : null;
+      setPrestamo(p);
+      setPagos(pgRes.data || []);
+    } catch (error) {
+      console.error('Error cargando datos:', error);
+      alert('Error al cargar los datos');
+    }
   };
 
-  useEffect(() => { load(); }, [prestamoId]);
+  useEffect(() => { 
+    if (prestamoId) load(); 
+  }, [prestamoId]);
 
   const handlePagar = async () => {
     const montoNum = parseFloat(monto);
     if (!montoNum || montoNum <= 0) return alert('Ingrese un monto válido');
+    
     setSaving(true);
     try {
-      await pagosAPI.create({ prestamoId, monto: montoNum, notas });
-      setMonto(''); setNotas('');
-      setSuccess(`Pago de ${fmt(montoNum)} registrado exitosamente`);
+      // ✅ CORREGIDO: Usar el método correcto según api.js
+      await pagosAPI.registrar({
+        prestamoId,
+        monto: montoNum,
+        observacion: notas || ''  // Cambié 'notas' por 'observacion' para coincidir con el backend
+      });
+      
+      setMonto(''); 
+      setNotas('');
+      setSuccess(`✅ Pago de ${fmt(montoNum)} registrado exitosamente`);
       setTimeout(() => setSuccess(''), 3000);
       await load();
-    } catch (e) { alert(e.response?.data?.error || 'Error al registrar pago'); }
-    finally { setSaving(false); }
+    } catch (e) { 
+      console.error('Error registrando pago:', e);
+      alert(e.response?.data?.error || 'Error al registrar pago'); 
+    } finally { 
+      setSaving(false); 
+    }
   };
 
   if (!prestamo) return <div style={{ textAlign: 'center', padding: '60px', color: '#94a3b8' }}>Cargando...</div>;
 
-  const restante = prestamo.totalAPagar - prestamo.totalPagado;
-  const pct = prestamo.totalAPagar > 0 ? Math.round((prestamo.totalPagado / prestamo.totalAPagar) * 100) : 0;
+  const restante = prestamo.totalAPagar - (prestamo.totalPagado || 0);
+  const pct = prestamo.totalAPagar > 0 ? Math.round(((prestamo.totalPagado || 0) / prestamo.totalAPagar) * 100) : 0;
   const cuotaSugerida = prestamo.numeroCuotas > 0 ? Math.round(prestamo.totalAPagar / prestamo.numeroCuotas) : 0;
 
   return (
@@ -75,12 +97,12 @@ export default function PagarCredito() {
         <span style={s.headerTitle}>Registrar Pago</span>
       </div>
       <div style={s.content}>
-        {success && <div style={s.success}>✅ {success}</div>}
+        {success && <div style={s.success}>{success}</div>}
         <div style={s.prestamoCard}>
           <div style={{ fontSize: '18px', fontWeight: '700', color: '#1e293b', marginBottom: '12px' }}>{prestamo.cliente?.nombre}</div>
           <div style={s.row}><span>Capital:</span><span>{fmt(prestamo.capital)}</span></div>
           <div style={s.row}><span>Total a pagar:</span><span>{fmt(prestamo.totalAPagar)}</span></div>
-          <div style={s.row}><span>Total pagado:</span><span style={{ color: '#22c55e', fontWeight: '600' }}>{fmt(prestamo.totalPagado)}</span></div>
+          <div style={s.row}><span>Total pagado:</span><span style={{ color: '#22c55e', fontWeight: '600' }}>{fmt(prestamo.totalPagado || 0)}</span></div>
           <div style={s.row}><span>Restante:</span><span style={{ color: '#ef4444', fontWeight: '700' }}>{fmt(restante)}</span></div>
           <div style={s.progressBar}><div style={{ ...s.progressFill, width: `${pct}%` }} /></div>
           <div style={{ fontSize: '12px', color: '#94a3b8', textAlign: 'right' }}>{pct}% pagado</div>
@@ -90,30 +112,55 @@ export default function PagarCredito() {
           <div style={s.form}>
             <div style={{ fontSize: '16px', fontWeight: '700', color: '#1e293b', marginBottom: '16px' }}>Registrar Pago</div>
             <label style={s.label}>Monto a pagar ($)</label>
-            <input style={s.input} type="number" placeholder="Ingrese monto" value={monto} onChange={e => setMonto(e.target.value)} />
+            <input 
+              style={s.input} 
+              type="number" 
+              placeholder="Ingrese monto" 
+              value={monto} 
+              onChange={e => setMonto(e.target.value)} 
+            />
             <div style={s.quickBtns}>
-              <button style={s.quickBtn} onClick={() => setMonto(cuotaSugerida.toString())}>Cuota {fmt(cuotaSugerida)}</button>
-              <button style={s.quickBtn} onClick={() => setMonto(restante.toString())}>Pagar todo {fmt(restante)}</button>
+              <button style={s.quickBtn} onClick={() => setMonto(cuotaSugerida.toString())}>
+                Cuota {fmt(cuotaSugerida)}
+              </button>
+              <button style={s.quickBtn} onClick={() => setMonto(restante.toString())}>
+                Pagar todo {fmt(restante)}
+              </button>
             </div>
             <label style={s.label}>Notas (opcional)</label>
-            <input style={s.input} placeholder="Observaciones..." value={notas} onChange={e => setNotas(e.target.value)} />
-            <button style={s.saveBtn} onClick={handlePagar} disabled={saving}>{saving ? 'Registrando...' : '💵 Registrar Pago'}</button>
+            <input 
+              style={s.input} 
+              placeholder="Observaciones..." 
+              value={notas} 
+              onChange={e => setNotas(e.target.value)} 
+            />
+            <button 
+              style={s.saveBtn} 
+              onClick={handlePagar} 
+              disabled={saving}
+            >
+              {saving ? 'Registrando...' : '💵 Registrar Pago'}
+            </button>
           </div>
         )}
 
         <div style={s.historial}>
           <div style={s.histTitle}>Historial de Pagos ({pagos.length})</div>
-          {pagos.length === 0 ? <div style={{ textAlign: 'center', color: '#94a3b8', padding: '20px' }}>Sin pagos registrados</div> :
+          {pagos.length === 0 ? (
+            <div style={{ textAlign: 'center', color: '#94a3b8', padding: '20px' }}>Sin pagos registrados</div>
+          ) : (
             pagos.map(pg => (
               <div key={pg._id} style={s.pagoItem}>
                 <div>
                   <div style={{ fontWeight: '600', color: '#1e293b' }}>{fmt(pg.monto)}</div>
-                  {pg.notas && <div style={{ fontSize: '12px', color: '#94a3b8' }}>{pg.notas}</div>}
+                  {pg.observacion && <div style={{ fontSize: '12px', color: '#94a3b8' }}>{pg.observacion}</div>}
                 </div>
-                <div style={{ color: '#64748b', fontSize: '13px' }}>{new Date(pg.fechaPago).toLocaleDateString('es-CO')}</div>
+                <div style={{ color: '#64748b', fontSize: '13px' }}>
+                  {new Date(pg.fecha).toLocaleDateString('es-CO')}
+                </div>
               </div>
             ))
-          }
+          )}
         </div>
       </div>
     </div>

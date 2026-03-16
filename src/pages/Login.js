@@ -6,16 +6,30 @@ export default function Login({ onLogin }) {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [tokenVisible, setTokenVisible] = useState(false); // Nuevo estado
+  const [ultimoToken, setUltimoToken] = useState(""); // Nuevo estado
 
   const handleSubmit = async () => {
     if (!usuario || !password) { setError("Ingrese todos los campos"); return; }
     setLoading(true); setError("");
     try {
       const res = await authAPI.login(usuario, password);
+      
+      // Guardar el token para mostrarlo
+      setUltimoToken(res.data.token);
+      
+      // Llamar al onLogin original
       onLogin(res.data.user, res.data.token);
+      
     } catch (err) {
       setError(err.response?.data?.error || "Error al iniciar sesion");
     } finally { setLoading(false); }
+  };
+
+  // Función para copiar token al portapapeles
+  const copiarToken = () => {
+    navigator.clipboard.writeText(ultimoToken);
+    alert('✅ Token copiado al portapapeles');
   };
 
   const inputStyle = {
@@ -101,6 +115,63 @@ export default function Login({ onLogin }) {
         >
           {loading ? "Iniciando..." : "Iniciar Sesion"}
         </button>
+
+        {/* 🔥 NUEVO: Botón para mostrar/ocultar token (solo para desarrollo) */}
+        {ultimoToken && (
+          <div style={{ marginTop: "20px", borderTop: "1px solid #e2e8f0", paddingTop: "16px" }}>
+            <button
+              onClick={() => setTokenVisible(!tokenVisible)}
+              style={{
+                background: "none",
+                border: "1px dashed #0d9488",
+                borderRadius: "8px",
+                padding: "8px",
+                color: "#0d9488",
+                fontSize: "14px",
+                cursor: "pointer",
+                width: "100%",
+                marginBottom: "8px"
+              }}
+            >
+              {tokenVisible ? "🔒 Ocultar Token" : "🔑 Mostrar Token (solo pruebas)"}
+            </button>
+            
+            {tokenVisible && (
+              <div style={{
+                background: "#f8fafc",
+                border: "1px solid #e2e8f0",
+                borderRadius: "8px",
+                padding: "12px",
+                position: "relative"
+              }}>
+                <p style={{
+                  fontSize: "12px",
+                  color: "#64748b",
+                  marginBottom: "8px",
+                  wordBreak: "break-all",
+                  fontFamily: "monospace"
+                }}>
+                  {ultimoToken}
+                </p>
+                <button
+                  onClick={copiarToken}
+                  style={{
+                    background: "#0d9488",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: "6px",
+                    padding: "6px 12px",
+                    fontSize: "12px",
+                    cursor: "pointer",
+                    width: "100%"
+                  }}
+                >
+                  📋 Copiar Token
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
         <p style={{ textAlign: "center", fontSize: "12px", color: "#94a3b8", marginTop: "16px" }}>
           Ingresa con tu correo o numero de cedula
