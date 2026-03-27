@@ -19,23 +19,40 @@ export default function Clientes({ onLogout }) {
 
   const fetchClientes = async () => {
     setLoading(true);
-    try { const res = await clientesAPI.getAll(search); setClientes(res.data); }
-    catch(e) { console.error(e); } finally { setLoading(false); }
+    try { 
+      const res = await clientesAPI.getAll(); 
+      setClientes(res.data); 
+    }
+    catch(e) { console.error(e); } 
+    finally { setLoading(false); }
   };
 
   useEffect(() => { fetchClientes(); }, [search]);
 
   const handleSave = async () => {
-    if (!form.nombre||!form.cedula||!form.celular||!form.direccion) {
-      alert("Complete todos los campos requeridos"); return;
+    // Verificar campos requeridos
+    if (!form.nombre || !form.cedula || !form.celular) {
+      alert("Complete todos los campos requeridos (Nombre, Cédula y Teléfono)");
+      return;
     }
+    
     setSaving(true);
     try {
-      await clientesAPI.create(form);
+      // Enviar los datos correctamente al backend
+      await clientesAPI.create({
+        nombre: form.nombre,
+        cedula: form.cedula,
+        telefono: form.celular,  // El backend espera 'telefono', no 'celular'
+        direccion: form.direccion || "",
+        tipo: form.tipoCliente
+      });
       setShowModal(false);
       setForm({ nombre:"", cedula:"", celular:"", direccion:"", tipoCliente:"nuevo" });
       fetchClientes();
-    } catch(e) { alert(e.response?.data?.error || "Error al guardar"); }
+    } catch(e) { 
+      console.error("Error al guardar:", e);
+      alert(e.response?.data?.error || "Error al guardar"); 
+    }
     finally { setSaving(false); }
   };
 
@@ -85,9 +102,9 @@ export default function Clientes({ onLogout }) {
             <div style={{ flex:1, minWidth:0 }}>
               <div style={{ fontSize:"16px", fontWeight:"700", color:"#1e293b", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{c.nombre}</div>
               <div style={{ fontSize:"13px", color:"#64748b", marginTop:"2px" }}>CC: {c.cedula}</div>
-              <div style={{ fontSize:"13px", color:"#64748b" }}>Tel: {c.celular}</div>
+              <div style={{ fontSize:"13px", color:"#64748b" }}>Tel: {c.telefono}</div>
             </div>
-            <span style={{ ...badgeColors[c.tipoCliente], padding:"4px 10px", borderRadius:"20px", fontSize:"12px", fontWeight:"600", whiteSpace:"nowrap", flexShrink:0 }}>{c.tipoCliente}</span>
+            <span style={{ ...badgeColors[c.tipo], padding:"4px 10px", borderRadius:"20px", fontSize:"12px", fontWeight:"600", whiteSpace:"nowrap", flexShrink:0 }}>{c.tipo}</span>
           </div>
         ))}
       </div>
@@ -103,12 +120,12 @@ export default function Clientes({ onLogout }) {
             </div>
             <label style={{ display:"block", fontSize:"14px", fontWeight:"600", color:"#374151", marginBottom:"6px" }}>Nombre <span style={{ color:"#ef4444" }}>*</span></label>
             <input style={inputSt} type="text" placeholder="Nombre completo" value={form.nombre} onChange={e => setForm({...form, nombre:e.target.value})} />
-            <label style={{ display:"block", fontSize:"14px", fontWeight:"600", color:"#374151", marginBottom:"6px" }}>Cedula <span style={{ color:"#ef4444" }}>*</span></label>
-            <input style={inputSt} type="text" placeholder="Numero de cedula" value={form.cedula} onChange={e => setForm({...form, cedula:e.target.value})} />
-            <label style={{ display:"block", fontSize:"14px", fontWeight:"600", color:"#374151", marginBottom:"6px" }}>Celular <span style={{ color:"#ef4444" }}>*</span></label>
-            <input style={inputSt} type="tel" placeholder="Numero de celular" value={form.celular} onChange={e => setForm({...form, celular:e.target.value})} />
-            <label style={{ display:"block", fontSize:"14px", fontWeight:"600", color:"#374151", marginBottom:"6px" }}>Direccion <span style={{ color:"#ef4444" }}>*</span></label>
-            <input style={inputSt} type="text" placeholder="Direccion del cliente" value={form.direccion} onChange={e => setForm({...form, direccion:e.target.value})} />
+            <label style={{ display:"block", fontSize:"14px", fontWeight:"600", color:"#374151", marginBottom:"6px" }}>Cédula <span style={{ color:"#ef4444" }}>*</span></label>
+            <input style={inputSt} type="text" placeholder="Número de cédula" value={form.cedula} onChange={e => setForm({...form, cedula:e.target.value})} />
+            <label style={{ display:"block", fontSize:"14px", fontWeight:"600", color:"#374151", marginBottom:"6px" }}>Teléfono <span style={{ color:"#ef4444" }}>*</span></label>
+            <input style={inputSt} type="tel" placeholder="Número de teléfono" value={form.celular} onChange={e => setForm({...form, celular:e.target.value})} />
+            <label style={{ display:"block", fontSize:"14px", fontWeight:"600", color:"#374151", marginBottom:"6px" }}>Dirección</label>
+            <input style={inputSt} type="text" placeholder="Dirección del cliente" value={form.direccion} onChange={e => setForm({...form, direccion:e.target.value})} />
             <label style={{ display:"block", fontSize:"14px", fontWeight:"600", color:"#374151", marginBottom:"6px" }}>Tipo de Cliente</label>
             <select style={{ ...inputSt, marginBottom:"24px" }} value={form.tipoCliente} onChange={e => setForm({...form, tipoCliente:e.target.value})}>
               <option value="nuevo">Nuevo</option>

@@ -1,18 +1,17 @@
-import React, { useState } from "react";
-import { authAPI } from "../services/api";
+import { useState } from "react";
+import api from "../api/api";
 
-export default function Login({ onLogin }) {
-  const [usuario, setUsuario] = useState("");
+export default function Login() {
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleSubmit = async () => {
-    const usuarioLimpio = usuario.trim();
-    const passwordLimpia = password.trim();
-
-    if (!usuarioLimpio || !passwordLimpia) {
-      setError("Ingrese todos los campos");
+  const login = async (e) => {
+    e.preventDefault();
+    
+    if (!email || !password) {
+      setError("Por favor completa todos los campos");
       return;
     }
 
@@ -20,218 +19,147 @@ export default function Login({ onLogin }) {
     setError("");
 
     try {
-      console.log("1. Intentando login con:", usuarioLimpio);
+      console.log("1️⃣ Intentando login con:", email);
+      
+      const res = await api.post("/auth/admin/login", {
+        email,
+        password
+      });
 
-      const esEmail = usuarioLimpio.includes("@");
+      console.log("2️⃣ Respuesta del servidor:", res.data);
 
-      const res = esEmail
-        ? await authAPI.login(usuarioLimpio, passwordLimpia)
-        : await authAPI.loginWithCedula(usuarioLimpio, passwordLimpia);
-
-      console.log("2. Respuesta del servidor:", res.data);
-
-      if (res.data.user.rol !== "cobrador") {
-        setError("No tienes permisos de cobrador");
+      // Verificar que el usuario es superadmin
+      const rolesPermitidos = ["superadmin", "superadministrador", "super_admin"];
+      
+      if (!rolesPermitidos.includes(res.data.user.rol)) {
+        setError(`No tienes permisos de Super Admin. Tu rol es: ${res.data.user.rol}`);
         setLoading(false);
         return;
       }
 
-      onLogin(res.data.user, res.data.token);
-    } catch (err) {
-      console.error("3. Error completo:", err);
-
-      if (err.code === "ECONNABORTED") {
-        setError("Tiempo de espera agotado. Intenta de nuevo.");
-      } else if (err.response?.status === 401) {
-        setError("Usuario o contraseña incorrectos");
-      } else if (err.response?.status === 404) {
-        setError("Usuario no encontrado");
-      } else if (err.response?.status === 400) {
-        setError(err.response?.data?.error || "Datos incompletos");
-      } else if (!err.response) {
-        setError("No se pudo conectar al servidor. Verifica tu conexión.");
+      // Guardar token
+      if (res.data.token) {
+        localStorage.setItem("super_token", res.data.token);
+        console.log("3️⃣ Token guardado correctamente");
+        console.log("Token:", res.data.token.substring(0, 30) + "...");
+        
+        // Redirigir
+        window.location.href = "/";
       } else {
-        setError(err.response?.data?.error || "Error al iniciar sesión");
+        setError("No se recibió token del servidor");
       }
-    } finally {
+
+    } catch (err) {
+      console.error("❌ Error en login:", err);
+      console.error("Respuesta del error:", err.response?.data);
+      
+      setError(
+        err.response?.data?.error ||
+        err.response?.data?.mensaje ||
+        "Error al iniciar sesión"
+      );
       setLoading(false);
     }
   };
 
-  const inputStyle = {
-    width: "100%",
-    padding: "14px 16px",
-    border: "1.5px solid #e2e8f0",
-    borderRadius: "12px",
-    fontSize: "16px",
-    outline: "none",
-    marginBottom: "20px",
-    boxSizing: "border-box",
-    WebkitAppearance: "none",
-    background: "#fff",
-    color: "#1e293b",
-    transition: "border-color 0.3s"
-  };
-
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        minHeight: "-webkit-fill-available",
-        background: "#f1f5f9",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "16px",
-        fontFamily: "Inter, sans-serif"
-      }}
-    >
-      <div
-        style={{
-          background: "#fff",
-          borderRadius: "20px",
-          padding: "40px 28px",
-          width: "100%",
-          maxWidth: "400px",
-          boxShadow: "0 4px 32px rgba(0,0,0,0.08)"
-        }}
-      >
-        <div
-          style={{
-            width: "68px",
-            height: "68px",
-            background: "#0d9488",
-            borderRadius: "18px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            margin: "0 auto 20px",
-            fontSize: "30px"
-          }}
-        >
-          💧
-        </div>
-
-        <h1
-          style={{
-            textAlign: "center",
-            fontSize: "26px",
-            fontWeight: "800",
-            color: "#1e293b",
-            marginBottom: "4px"
-          }}
-        >
-          Gota a Gota
-        </h1>
-
-        <p
-          style={{
-            textAlign: "center",
-            color: "#64748b",
-            fontSize: "15px",
-            marginBottom: "32px"
-          }}
-        >
-          Sistema de cobros - Cobrador
-        </p>
+    <div style={{
+      minHeight: "100vh",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      background: "radial-gradient(ellipse at top, #1a1a3a, #0a0a1f)"
+    }}>
+      <div style={{
+        background: "rgba(10,10,31,0.7)",
+        backdropFilter: "blur(10px)",
+        padding: "50px",
+        borderRadius: "30px",
+        border: "2px solid rgba(108,60,240,0.3)",
+        boxShadow: "0 0 100px rgba(108,60,240,0.3)",
+        width: "400px",
+        textAlign: "center"
+      }}>
+        <h1 style={{ fontSize: "48px", marginBottom: "20px" }}>🚀</h1>
+        <h2 style={{
+          background: "linear-gradient(135deg, #6c3cf0, #ff3cd6)",
+          WebkitBackgroundClip: "text",
+          WebkitTextFillColor: "transparent",
+          fontSize: "32px",
+          marginBottom: "30px"
+        }}>
+          Acceso Galáctico
+        </h2>
 
         {error && (
-          <div
-            style={{
-              background: "#fef2f2",
-              color: "#ef4444",
-              padding: "12px 16px",
-              borderRadius: "10px",
-              marginBottom: "20px",
-              fontSize: "14px",
-              textAlign: "center",
-              border: "1px solid #fee2e2"
-            }}
-          >
+          <div style={{
+            background: "rgba(255,0,0,0.1)",
+            border: "1px solid rgba(255,60,214,0.3)",
+            color: "#ff3cd6",
+            padding: "10px",
+            borderRadius: "10px",
+            marginBottom: "20px"
+          }}>
             {error}
           </div>
         )}
 
-        <label
-          style={{
-            display: "block",
-            fontSize: "14px",
-            fontWeight: "600",
-            color: "#374151",
-            marginBottom: "6px"
-          }}
-        >
-          Usuario
-        </label>
+        <form onSubmit={login}>
+          <input
+            placeholder="Email"
+            type="email"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            style={{
+              width: "100%",
+              padding: "15px",
+              marginBottom: "15px",
+              background: "rgba(255,255,255,0.05)",
+              border: "2px solid rgba(108,60,240,0.3)",
+              borderRadius: "15px",
+              color: "white",
+              fontSize: "16px",
+              outline: "none"
+            }}
+          />
 
-        <input
-          style={inputStyle}
-          type="text"
-          placeholder="Correo electrónico o cédula"
-          value={usuario}
-          onChange={(e) => setUsuario(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-          autoCapitalize="none"
-          autoCorrect="off"
-          autoComplete="username"
-          disabled={loading}
-        />
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            style={{
+              width: "100%",
+              padding: "15px",
+              marginBottom: "25px",
+              background: "rgba(255,255,255,0.05)",
+              border: "2px solid rgba(108,60,240,0.3)",
+              borderRadius: "15px",
+              color: "white",
+              fontSize: "16px",
+              outline: "none"
+            }}
+          />
 
-        <label
-          style={{
-            display: "block",
-            fontSize: "14px",
-            fontWeight: "600",
-            color: "#374151",
-            marginBottom: "6px"
-          }}
-        >
-          Contraseña
-        </label>
-
-        <input
-          style={inputStyle}
-          type="password"
-          placeholder="Ingrese su contraseña"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-          autoComplete="current-password"
-          disabled={loading}
-        />
-
-        <button
-          style={{
-            width: "100%",
-            padding: "16px",
-            background: loading ? "#5eaaa4" : "#0d9488",
-            color: "#fff",
-            border: "none",
-            borderRadius: "12px",
-            fontSize: "16px",
-            fontWeight: "700",
-            cursor: loading ? "not-allowed" : "pointer",
-            WebkitTapHighlightColor: "transparent",
-            touchAction: "manipulation",
-            transition: "background 0.3s",
-            opacity: loading ? 0.7 : 1
-          }}
-          onClick={handleSubmit}
-          disabled={loading}
-        >
-          {loading ? "Iniciando sesión..." : "Iniciar Sesión"}
-        </button>
-
-        <p
-          style={{
-            textAlign: "center",
-            fontSize: "12px",
-            color: "#94a3b8",
-            marginTop: "16px"
-          }}
-        >
-          Ingresa con tu correo o número de cédula
-        </p>
+          <button
+            type="submit"
+            disabled={loading}
+            style={{
+              width: "100%",
+              padding: "15px",
+              background: "linear-gradient(135deg, #6c3cf0, #ff3cd6)",
+              border: "none",
+              borderRadius: "15px",
+              color: "white",
+              fontSize: "18px",
+              fontWeight: "bold",
+              cursor: loading ? "not-allowed" : "pointer",
+              opacity: loading ? 0.5 : 1
+            }}
+          >
+            {loading ? "ACCEDIENDO..." : "ENTRAR AL SISTEMA"}
+          </button>
+        </form>
       </div>
     </div>
   );
