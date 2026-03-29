@@ -22,8 +22,11 @@ export default function Login({ onLogin }) {
     setError("");
 
     try {
-      console.log("LOGIN COBRADOR PROD");
-      console.log("📤 Enviando:", { email, password: cleanPassword ? "***" : "" });
+      console.log("🔐 LOGIN COBRADOR");
+      console.log("📤 Enviando:", {
+        email,
+        password: cleanPassword ? "***" : ""
+      });
 
       const res = await authAPI.cobradorLogin(email, cleanPassword);
 
@@ -51,7 +54,9 @@ export default function Login({ onLogin }) {
       console.error("❌ Error login cobrador:", err);
       console.error("❌ Backend respondió:", err.response?.data);
 
-      if (err.response?.status === 400) {
+      if (err.code === "ECONNABORTED") {
+        setError("Tiempo de espera agotado. Intenta de nuevo.");
+      } else if (err.response?.status === 400) {
         setError(err.response?.data?.error || "Datos incompletos");
       } else if (err.response?.status === 401) {
         setError(err.response?.data?.error || "Credenciales inválidas");
@@ -116,11 +121,26 @@ export default function Login({ onLogin }) {
           💧
         </div>
 
-        <h1 style={{ textAlign: "center", fontSize: "26px", fontWeight: "800", color: "#1e293b", marginBottom: "4px" }}>
+        <h1
+          style={{
+            textAlign: "center",
+            fontSize: "26px",
+            fontWeight: "800",
+            color: "#1e293b",
+            marginBottom: "4px"
+          }}
+        >
           Gota a Gota
         </h1>
 
-        <p style={{ textAlign: "center", color: "#64748b", fontSize: "15px", marginBottom: "32px" }}>
+        <p
+          style={{
+            textAlign: "center",
+            color: "#64748b",
+            fontSize: "15px",
+            marginBottom: "32px"
+          }}
+        >
           Sistema de cobros
         </p>
 
@@ -141,8 +161,17 @@ export default function Login({ onLogin }) {
           </div>
         )}
 
-        <form onSubmit={handleSubmit}>
-          <label htmlFor="usuario" style={{ display: "block", fontSize: "14px", fontWeight: "600", color: "#374151", marginBottom: "6px" }}>
+        <form onSubmit={handleSubmit} noValidate>
+          <label
+            htmlFor="usuario"
+            style={{
+              display: "block",
+              fontSize: "14px",
+              fontWeight: "600",
+              color: "#374151",
+              marginBottom: "6px"
+            }}
+          >
             Correo electrónico
           </label>
 
@@ -150,15 +179,26 @@ export default function Login({ onLogin }) {
             id="usuario"
             name="usuario"
             style={inputStyle}
-            type="email"
+            type="text"
             placeholder="Ingrese su correo"
             value={usuario}
             onChange={(e) => setUsuario(e.target.value)}
             autoComplete="username"
+            autoCapitalize="none"
+            autoCorrect="off"
             disabled={loading}
           />
 
-          <label htmlFor="password" style={{ display: "block", fontSize: "14px", fontWeight: "600", color: "#374151", marginBottom: "6px" }}>
+          <label
+            htmlFor="password"
+            style={{
+              display: "block",
+              fontSize: "14px",
+              fontWeight: "600",
+              color: "#374151",
+              marginBottom: "6px"
+            }}
+          >
             Contraseña
           </label>
 
