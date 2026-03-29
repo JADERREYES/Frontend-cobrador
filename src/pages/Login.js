@@ -6,144 +6,193 @@ export default function Login({ onLogin }) {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [tokenVisible, setTokenVisible] = useState(false);
-  const [ultimoToken, setUltimoToken] = useState("");
 
-  const handleSubmit = async () => {
-    if (!usuario || !password) { 
-      setError("Ingrese todos los campos"); 
-      return; 
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    const email = usuario.trim().toLowerCase();
+    const cleanPassword = password.trim();
+
+    if (!email || !cleanPassword) {
+      setError("Ingrese correo y contraseña");
+      return;
     }
 
-    setLoading(true); 
+    setLoading(true);
     setError("");
 
     try {
-      // 🔥 LOGIN DE COBRADOR
-      const res = await authAPI.cobradorLogin(usuario, password);
+      console.log("LOGIN COBRADOR PROD");
+      console.log("📤 Enviando:", { email, password: cleanPassword ? "***" : "" });
 
-      console.log("LOGIN OK:", res.data);
+      const res = await authAPI.cobradorLogin(email, cleanPassword);
 
-      // Guardar token en localStorage
-      localStorage.setItem("cobrador_token", res.data.token);
-      
-      // 🔥 IMPORTANTE: Guardar el tenantId para las peticiones
-      if (res.data.user && res.data.user.tenantId) {
-        localStorage.setItem("tenantId", res.data.user.tenantId);
-        console.log("✅ tenantId guardado:", res.data.user.tenantId);
+      console.log("✅ Respuesta login cobrador:", res.data);
+
+      if (!res.data?.token || !res.data?.user) {
+        setError("Respuesta inválida del servidor");
+        return;
       }
 
-      // Guardar usuario completo
+      if (res.data.user.rol !== "cobrador") {
+        setError("No tienes permisos de cobrador");
+        return;
+      }
+
+      localStorage.setItem("cobrador_token", res.data.token);
       localStorage.setItem("cobrador_user", JSON.stringify(res.data.user));
 
-      // Mostrar token (modo desarrollo)
-      setUltimoToken(res.data.token);
+      if (res.data.user.tenantId) {
+        localStorage.setItem("tenantId", res.data.user.tenantId);
+      }
 
-      // Login exitoso
       onLogin(res.data.user, res.data.token);
-
     } catch (err) {
-      console.log("ERROR LOGIN:", err.response?.data);
-      setError(err.response?.data?.error || "Error al iniciar sesión");
-    } finally { 
-      setLoading(false); 
+      console.error("❌ Error login cobrador:", err);
+      console.error("❌ Backend respondió:", err.response?.data);
+
+      if (err.response?.status === 400) {
+        setError(err.response?.data?.error || "Datos incompletos");
+      } else if (err.response?.status === 401) {
+        setError(err.response?.data?.error || "Credenciales inválidas");
+      } else if (!err.response) {
+        setError("No se pudo conectar con el servidor");
+      } else {
+        setError(err.response?.data?.error || "Error al iniciar sesión");
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
-  const copiarToken = () => {
-    navigator.clipboard.writeText(ultimoToken);
-    alert('✅ Token copiado al portapapeles');
-  };
-
   const inputStyle = {
-    width: "100%", padding: "14px 16px",
-    border: "1.5px solid #e2e8f0", borderRadius: "12px",
-    fontSize: "16px", outline: "none", marginBottom: "20px",
+    width: "100%",
+    padding: "14px 16px",
+    border: "1.5px solid #e2e8f0",
+    borderRadius: "12px",
+    fontSize: "16px",
+    outline: "none",
+    marginBottom: "20px",
     boxSizing: "border-box",
-    background: "#fff", color: "#1e293b"
+    background: "#fff",
+    color: "#1e293b"
   };
 
   return (
-    <div style={{
-      minHeight: "100vh",
-      background: "#f1f5f9",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: "16px"
-    }}>
-      <div style={{
-        background: "#fff",
-        borderRadius: "20px",
-        padding: "40px 28px",
-        width: "100%",
-        maxWidth: "400px",
-        boxShadow: "0 4px 32px rgba(0,0,0,0.08)"
-      }}>
+    <div
+      style={{
+        minHeight: "100vh",
+        background: "#f1f5f9",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "16px",
+        fontFamily: "Inter, sans-serif"
+      }}
+    >
+      <div
+        style={{
+          background: "#fff",
+          borderRadius: "20px",
+          padding: "40px 28px",
+          width: "100%",
+          maxWidth: "400px",
+          boxShadow: "0 4px 32px rgba(0,0,0,0.08)"
+        }}
+      >
+        <div
+          style={{
+            width: "68px",
+            height: "68px",
+            background: "#0d9488",
+            borderRadius: "18px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            margin: "0 auto 20px",
+            fontSize: "30px"
+          }}
+        >
+          💧
+        </div>
 
-        <h1 style={{ textAlign: "center" }}>Gota a Gota</h1>
+        <h1 style={{ textAlign: "center", fontSize: "26px", fontWeight: "800", color: "#1e293b", marginBottom: "4px" }}>
+          Gota a Gota
+        </h1>
+
+        <p style={{ textAlign: "center", color: "#64748b", fontSize: "15px", marginBottom: "32px" }}>
+          Sistema de cobros
+        </p>
 
         {error && (
-          <div style={{
-            background: "#fef2f2",
-            color: "#ef4444",
-            padding: "12px",
-            borderRadius: "10px",
-            marginBottom: "20px",
-            textAlign: "center"
-          }}>
+          <div
+            style={{
+              background: "#fef2f2",
+              color: "#ef4444",
+              padding: "12px 16px",
+              borderRadius: "10px",
+              marginBottom: "20px",
+              fontSize: "14px",
+              textAlign: "center",
+              border: "1px solid #fee2e2"
+            }}
+          >
             {error}
           </div>
         )}
 
-        <input
-          style={inputStyle}
-          type="text"
-          placeholder="Correo del cobrador"
-          value={usuario}
-          onChange={e => setUsuario(e.target.value)}
-        />
+        <form onSubmit={handleSubmit}>
+          <label htmlFor="usuario" style={{ display: "block", fontSize: "14px", fontWeight: "600", color: "#374151", marginBottom: "6px" }}>
+            Correo electrónico
+          </label>
 
-        <input
-          style={inputStyle}
-          type="password"
-          placeholder="Contraseña"
-          value={password}
-          onChange={e => setPassword(e.target.value)}
-        />
+          <input
+            id="usuario"
+            name="usuario"
+            style={inputStyle}
+            type="email"
+            placeholder="Ingrese su correo"
+            value={usuario}
+            onChange={(e) => setUsuario(e.target.value)}
+            autoComplete="username"
+            disabled={loading}
+          />
 
-        <button
-          onClick={handleSubmit}
-          disabled={loading}
-          style={{
-            width: "100%",
-            padding: "16px",
-            background: "#0d9488",
-            color: "#fff",
-            border: "none",
-            borderRadius: "12px",
-            fontWeight: "bold"
-          }}
-        >
-          {loading ? "Ingresando..." : "Iniciar sesión"}
-        </button>
+          <label htmlFor="password" style={{ display: "block", fontSize: "14px", fontWeight: "600", color: "#374151", marginBottom: "6px" }}>
+            Contraseña
+          </label>
 
-        {/* Mostrar token (solo pruebas) */}
-        {ultimoToken && (
-          <div style={{ marginTop: "20px" }}>
-            <button onClick={() => setTokenVisible(!tokenVisible)}>
-              Mostrar Token
-            </button>
+          <input
+            id="password"
+            name="password"
+            style={inputStyle}
+            type="password"
+            placeholder="Ingrese su contraseña"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete="current-password"
+            disabled={loading}
+          />
 
-            {tokenVisible && (
-              <div>
-                <p style={{ fontSize: "10px" }}>{ultimoToken}</p>
-                <button onClick={copiarToken}>Copiar</button>
-              </div>
-            )}
-          </div>
-        )}
-
+          <button
+            type="submit"
+            disabled={loading}
+            style={{
+              width: "100%",
+              padding: "16px",
+              background: loading ? "#5eaaa4" : "#0d9488",
+              color: "#fff",
+              border: "none",
+              borderRadius: "12px",
+              fontSize: "16px",
+              fontWeight: "700",
+              cursor: loading ? "not-allowed" : "pointer",
+              opacity: loading ? 0.7 : 1
+            }}
+          >
+            {loading ? "Iniciando sesión..." : "Iniciar Sesión"}
+          </button>
+        </form>
       </div>
     </div>
   );

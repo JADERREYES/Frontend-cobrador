@@ -1,77 +1,81 @@
-import axios from 'axios';
+import axios from "axios";
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const API_URL =
+  (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_URL) ||
+  process.env.REACT_APP_API_URL ||
+  "http://localhost:5000/api";
 
-const api = axios.create({ 
+console.log("🌐 API URL COBRADOR:", API_URL);
+
+const api = axios.create({
   baseURL: API_URL,
   timeout: 15000,
   headers: {
-    'Content-Type': 'application/json'
-  }
+    "Content-Type": "application/json",
+  },
 });
 
-// Interceptor para agregar token y tenantId
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('cobrador_token');
-  const tenantId = localStorage.getItem('tenantId');
+  const token = localStorage.getItem("cobrador_token");
+  const tenantId = localStorage.getItem("tenantId");
+
+  console.log("🚀 Request:", config.method?.toUpperCase(), `${config.baseURL}${config.url}`);
+  console.log("📦 Payload:", config.data);
 
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
 
   if (tenantId) {
-    config.headers['x-tenant-id'] = tenantId;
+    config.headers["x-tenant-id"] = tenantId;
   }
 
   return config;
 });
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log("✅ Response:", response.status, response.data);
+    return response;
+  },
   (error) => {
+    console.error("❌ Response error:", error.response?.status, error.response?.data);
+
     if (error.response?.status === 401) {
-      localStorage.clear();
-      window.location.href = '/';
+      localStorage.removeItem("cobrador_token");
+      localStorage.removeItem("cobrador_user");
     }
+
     return Promise.reject(error);
   }
 );
 
-// AUTH
 export const authAPI = {
-  cobradorLogin: async (email, password) => {
-    const response = await api.post('/auth/cobrador/login', { email, password });
-    if (response.data && response.data.user && response.data.user.tenantId) {
-      localStorage.setItem('tenantId', response.data.user.tenantId);
-    }
-    return response;
-  }
+  cobradorLogin: (email, password) =>
+    api.post("/auth/cobrador/login", { email, password }),
 };
 
-// CLIENTES
 export const clientesAPI = {
-  getAll: () => api.get('/clientes'),
+  getAll: () => api.get("/clientes"),
   getById: (id) => api.get(`/clientes/${id}`),
-  create: (data) => api.post('/clientes', data),
+  create: (data) => api.post("/clientes", data),
   update: (id, data) => api.put(`/clientes/${id}`, data),
-  delete: (id) => api.delete(`/clientes/${id}`)
+  delete: (id) => api.delete(`/clientes/${id}`),
 };
 
-// PRÉSTAMOS
 export const prestamosAPI = {
-  getAll: () => api.get('/prestamos'),
+  getAll: () => api.get("/prestamos"),
   getById: (id) => api.get(`/prestamos/${id}`),
   getByCliente: (clienteId) => api.get(`/prestamos/cliente/${clienteId}`),
-  create: (data) => api.post('/prestamos', data),
+  create: (data) => api.post("/prestamos", data),
   update: (id, data) => api.put(`/prestamos/${id}`, data),
-  delete: (id) => api.delete(`/prestamos/${id}`)
+  delete: (id) => api.delete(`/prestamos/${id}`),
 };
 
-// PAGOS
 export const pagosAPI = {
-  registrar: (data) => api.post('/pagos', data),
-  getAll: () => api.get('/pagos'),
-  getByPrestamo: (prestamoId) => api.get(`/pagos/prestamo/${prestamoId}`)
+  registrar: (data) => api.post("/pagos", data),
+  getAll: () => api.get("/pagos"),
+  getByPrestamo: (prestamoId) => api.get(`/pagos/prestamo/${prestamoId}`),
 };
 
 export default api;

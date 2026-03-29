@@ -24,9 +24,14 @@ export default function Login({ onLogin }) {
     try {
       console.log("1. Intentando login con:", usuarioLimpio);
 
-      const res = await authAPI.login(usuarioLimpio, passwordLimpia);
+      const res = await authAPI.cobradorLogin(usuarioLimpio, passwordLimpia);
 
       console.log("2. Respuesta del servidor:", res.data);
+
+      if (!res.data?.token) {
+        setError("La respuesta del servidor no contiene token");
+        return;
+      }
 
       if (!res.data?.user) {
         setError("La respuesta del servidor no contiene usuario");
@@ -38,9 +43,17 @@ export default function Login({ onLogin }) {
         return;
       }
 
+      localStorage.setItem("cobrador_token", res.data.token);
+      localStorage.setItem("cobrador_user", JSON.stringify(res.data.user));
+
+      if (res.data.user.tenantId) {
+        localStorage.setItem("tenantId", res.data.user.tenantId);
+      }
+
       onLogin(res.data.user, res.data.token);
     } catch (err) {
       console.error("3. Error completo:", err);
+      console.error("4. Respuesta backend:", err.response?.data);
 
       if (err.code === "ECONNABORTED") {
         setError("Tiempo de espera agotado. Intenta de nuevo.");
